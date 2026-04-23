@@ -78,15 +78,21 @@ function patchTracingJs(playwrightCorePath) {
     return true;
   }
 
-  // 1. Add import for network module (after import_page)
-  const importMarker = 'var import_page = require("../../page");';
+  // 1. Add import for page (for 1.59+) & network module
+  const importMarker = 'module.exports = __toCommonJS(tracing_exports);';
+  const importPage = 'var import_page = require("../../page");';
+  let importPatch = '\nvar import_network = require("../../network");';
   if (!content.includes(importMarker)) {
-    log('  Could not find import_page marker', 'red');
+    log(`  Could not find '${importMarker}' marker`, 'red');
     return false;
+  }
+  if (!content.includes(importPage)) {
+    log('  Could not find import_page import, will also patch it', 'cyan');
+    importPatch = `${importPatch}\n${importPage}`;
   }
   content = content.replace(
     importMarker,
-    `${importMarker}\nvar import_network = require("../../network");`
+    `${importMarker}${importPatch}`
   );
 
   // 2. Add call to _startWebSocketTracing after _snapshotter?.start()
